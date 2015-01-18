@@ -5,7 +5,9 @@ import queue
 import re
 from client import Client
 from url_tools import check_url, get_url_title
+from config import config_cmd, config_file
 
+config = None
 lock = None
 url_thread = None
 url_queue = None
@@ -78,13 +80,13 @@ class ChatServer(asyncore.dispatcher):
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.set_reuse_addr()
         self.bind((host, port))
-        self.listen(5)
+        self.listen(int(config['max_clients']))
 
     def handle_accept(self):
         pair = self.accept()
         if pair is not None:            
             sock, addr = pair
-            if len(clients) < 6:
+            if len(clients) < int(config['max_clients']):
                 client = Client()
                 client.socket = sock
                 client.buffer = ""
@@ -96,7 +98,8 @@ class ChatServer(asyncore.dispatcher):
                 print('Nove spojeni: ', addr)
                 handler = ChatHandler(sock)
                 client.handler = handler
-                client.send_line('Vitejte!\r\n\r\nZadejte prosim sve jmeno:')
+                client.send_line(config['welcome_str'])
+                client.send_line("Zadejte prosim sve jmeno:")
             else:
                 sock.send(b'Bohuzel byl prekrocen maximalni pocet pripojeni k serveru. :(')
                 
@@ -133,16 +136,28 @@ def message(addr, msg):
 def info_message(msg):
     for client in clients.values():
         if client.name:
-            client.info_message(msg)            
+            client.info_message(msg)          
+       
             
 if __name__ == "__main__":       
     print("Spoustim server chatu!")
+    
+    commandline_config = config_cmd()
+    file_config = config_file({"default_config.ini", "config.ini"})
+    
+    final_config = file_config._sections['server']
+    final_config.update((k, v) for k, v in vars(commandline_config[0]).items() if (v is not None or k not in final_config.keys()))
+    config = dict(final_config)
+    
+    print("Nastaveni:")
+    print(config)    
+    
     lock = threading.Lock()
     url_queue = queue.Queue()
     run_list = [True]
     url_thread = threading.Thread(target = get_url_title, args = (url_queue, run_list))
     url_thread.start()
-    server = ChatServer('localhost', 8080)
+    server = ChatServer(config['ip'], int(config['port']))
     try:
         asyncore.loop(timeout=1)
     except KeyboardInterrupt:
