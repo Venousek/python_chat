@@ -109,9 +109,10 @@ def private_message(addr, names, msg):
     lowerNames = [x.lower() for x in names] 
     recipients = {}           
     for client in clients.values():
-        if (client.name is not None) & (client.name.lower() in lowerNames):
-            client.private_message(clients[addr], msg)
-            recipients[client.addr] = client
+        if client.name:
+            if client.name.lower() in lowerNames:
+                client.private_message(clients[addr], msg)
+                recipients[client.addr] = client
             
     url = check_url(msg)
     if url:
@@ -143,7 +144,7 @@ if __name__ == "__main__":
     print("Spoustim server chatu!")
     
     commandline_config = config_cmd()
-    file_config = config_file({"default_config.ini", "config.ini"})
+    file_config = config_file({"config.ini"})
     
     final_config = file_config._sections['server']
     final_config.update((k, v) for k, v in vars(commandline_config[0]).items() if (v is not None or k not in final_config.keys()))

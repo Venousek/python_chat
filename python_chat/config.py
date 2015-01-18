@@ -38,8 +38,6 @@ def config_cmd():
                       help="welcome message",
                       )
     options, args = parser.parse_args()
-    print(options)
-    print(args)
     return((options, args))
 
 def config_file(filenames):   
